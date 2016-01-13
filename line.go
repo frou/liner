@@ -47,35 +47,41 @@ const (
 	unknown
 )
 
+// ASCII Control Codes
 const (
-	ctrlA = 1
-	ctrlB = 2
-	ctrlC = 3
-	ctrlD = 4
-	ctrlE = 5
-	ctrlF = 6
-	ctrlG = 7
-	ctrlH = 8
-	tab   = 9
-	lf    = 10
-	ctrlK = 11
-	ctrlL = 12
-	cr    = 13
-	ctrlN = 14
-	ctrlO = 15
-	ctrlP = 16
-	ctrlQ = 17
-	ctrlR = 18
-	ctrlS = 19
-	ctrlT = 20
-	ctrlU = 21
-	ctrlV = 22
-	ctrlW = 23
-	ctrlX = 24
-	ctrlY = 25
-	ctrlZ = 26
-	esc   = 27
-	bs    = 127
+	null      rune = 0 // ctrl@
+	ctrlA          = 1
+	ctrlB          = 2
+	ctrlC          = 3
+	ctrlD          = 4
+	ctrlE          = 5
+	ctrlF          = 6
+	ctrlG          = 7
+	backspace      = 8  // ctrlH
+	tab            = 9  // ctrlI
+	lf             = 10 // ctrlJ
+	ctrlK          = 11
+	ctrlL          = 12
+	cr             = 13 // ctrlM
+	ctrlN          = 14
+	ctrlO          = 15
+	ctrlP          = 16
+	ctrlQ          = 17
+	ctrlR          = 18
+	ctrlS          = 19
+	ctrlT          = 20
+	ctrlU          = 21
+	ctrlV          = 22
+	ctrlW          = 23
+	ctrlX          = 24
+	ctrlY          = 25
+	ctrlZ          = 26
+	esc            = 27  // ctrl[
+	fsep           = 28  // ctrl\
+	gsep           = 29  // ctrl]
+	rsep           = 30  // ctrl^
+	usep           = 31  // ctrl_
+	delCode        = 127 // (Not in C0)
 )
 
 const (
@@ -431,7 +437,7 @@ func (s *State) reverseISearch(origLine []rune, origPos int) ([]rune, int, inter
 				} else {
 					fmt.Print(beep)
 				}
-			case ctrlH, bs: // Backspace
+			case backspace, delCode:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -452,11 +458,10 @@ func (s *State) reverseISearch(origLine []rune, origPos int) ([]rune, int, inter
 				}
 			case ctrlG: // Cancel
 				return origLine, origPos, rune(esc), err
-
-			case tab, cr, lf, ctrlA, ctrlB, ctrlD, ctrlE, ctrlF, ctrlK,
-				ctrlL, ctrlN, ctrlO, ctrlP, ctrlQ, ctrlT, ctrlU, ctrlV, ctrlW, ctrlX, ctrlY, ctrlZ:
-				fallthrough
-			case 0, ctrlC, esc, 28, 29, 30, 31:
+			// Remaining unused control codes
+			case null, ctrlA, ctrlB, ctrlC, ctrlD, ctrlE, ctrlF, tab, lf,
+				ctrlK, ctrlL, cr, ctrlN, ctrlO, ctrlP, ctrlQ, ctrlT, ctrlU,
+				ctrlV, ctrlW, ctrlX, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
 				return []rune(foundLine), foundPos, next, err
 			default:
 				line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
@@ -698,19 +703,16 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, line, pos)
-			case ctrlC: // reset
-				fmt.Println("^C")
+			case ctrlX: // reset
 				if s.multiLineMode {
 					s.resetMultiLine(p, line, pos)
 				}
-				if s.ctrlCAborts {
-					return "", ErrPromptAborted
-				}
 				line = line[:0]
 				pos = 0
+				fmt.Println()
 				fmt.Print(prompt)
 				s.restartPrompt()
-			case ctrlH, bs: // Backspace
+			case backspace, delCode:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -745,12 +747,25 @@ mainLoop:
 					line = append(line[:pos-1], line[pos:]...)
 					pos--
 				}
-				// Remove non-whitespace to the left
+				posPriorToWordRemoval := pos
+				// Remove a word to the left
+				var breakerEncountered bool
 				for {
-					if pos == 0 || unicode.IsSpace(line[pos-1]) {
+					if pos == 0 {
 						break
 					}
-					buf = append(buf, line[pos-1])
+					left := line[pos-1]
+					if unicode.IsSpace(left) || breakerEncountered {
+						break
+					}
+					if s.wordBreaker(left) {
+						// ctrlW should remove at least one non-whitespace rune
+						if pos != posPriorToWordRemoval {
+							break
+						}
+						breakerEncountered = true
+					}
+					buf = append(buf, left)
 					line = append(line[:pos-1], line[pos:]...)
 					pos--
 				}
@@ -780,12 +795,13 @@ mainLoop:
 			// Catch keys that do nothing, but you don't want them to beep
 			case esc:
 				// DO NOTHING
-			// Unused keys
-			case ctrlG, ctrlO, ctrlQ, ctrlS, ctrlV, ctrlX, ctrlZ:
-				fallthrough
-			// Catch unhandled control codes (anything <= 31)
-			case 0, 28, 29, 30, 31:
-				fmt.Print(beep)
+			// Remaining unused control codes
+			case null, ctrlC, ctrlG, ctrlO, ctrlQ, ctrlS, ctrlV, ctrlZ, fsep,
+				gsep, rsep, usep:
+				f := s.unusedControlCodeHandler
+				if f == nil || !f(v) {
+					fmt.Print(beep)
+				}
 			default:
 				if pos == len(line) && !s.multiLineMode && countGlyphs(p)+countGlyphs(line) < s.columns-1 {
 					line = append(line, v)
@@ -814,19 +830,23 @@ mainLoop:
 				}
 			case wordLeft, altB:
 				if pos > 0 {
-					var spaceHere, spaceLeft, leftKnown bool
+					var spaceLeft, spaceHere, havePrevIter bool
 					for {
 						pos--
 						if pos == 0 {
 							break
 						}
-						if leftKnown {
+						left, here := line[pos-1], line[pos]
+						if havePrevIter {
 							spaceHere = spaceLeft
 						} else {
-							spaceHere = unicode.IsSpace(line[pos])
+							spaceHere = unicode.IsSpace(here)
 						}
-						spaceLeft, leftKnown = unicode.IsSpace(line[pos-1]), true
-						if !spaceHere && spaceLeft {
+						spaceLeft = unicode.IsSpace(left)
+						havePrevIter = true
+						if s.wordBreaker(here) ||
+							(spaceLeft || s.wordBreaker(left)) && !spaceHere {
+							// Word begins here.
 							break
 						}
 					}
@@ -841,19 +861,23 @@ mainLoop:
 				}
 			case wordRight, altF:
 				if pos < len(line) {
-					var spaceHere, spaceLeft, hereKnown bool
+					var spaceLeft, spaceHere, havePrevIter bool
 					for {
 						pos++
 						if pos == len(line) {
 							break
 						}
-						if hereKnown {
+						left, here := line[pos-1], line[pos]
+						if havePrevIter {
 							spaceLeft = spaceHere
 						} else {
-							spaceLeft = unicode.IsSpace(line[pos-1])
+							spaceLeft = unicode.IsSpace(left)
 						}
-						spaceHere, hereKnown = unicode.IsSpace(line[pos]), true
-						if spaceHere && !spaceLeft {
+						spaceHere = unicode.IsSpace(here)
+						havePrevIter = true
+						if s.wordBreaker(left) ||
+							!spaceLeft && (spaceHere || s.wordBreaker(here)) {
+							// Word ended left.
 							break
 						}
 					}
@@ -959,14 +983,13 @@ mainLoop:
 					// exit
 					return "", io.EOF
 				}
-
 				// ctrlD is a potential EOF, so the rune reader shuts down.
 				// Therefore, if it isn't actually an EOF, we must re-startPrompt.
 				s.restartPrompt()
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, []rune{}, 0)
-			case ctrlH, bs: // Backspace
+			case backspace, delCode:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -974,24 +997,19 @@ mainLoop:
 					line = append(line[:pos-n], line[pos:]...)
 					pos -= n
 				}
-			case ctrlC:
-				fmt.Println("^C")
+			case ctrlX:
 				if s.multiLineMode {
 					s.resetMultiLine(p, line, pos)
 				}
-				if s.ctrlCAborts {
-					return "", ErrPromptAborted
-				}
 				line = line[:0]
 				pos = 0
+				fmt.Println()
 				fmt.Print(prompt)
 				s.restartPrompt()
-			// Unused keys
-			case esc, tab, ctrlA, ctrlB, ctrlE, ctrlF, ctrlG, ctrlK, ctrlN, ctrlO, ctrlP, ctrlQ, ctrlR, ctrlS,
-				ctrlT, ctrlU, ctrlV, ctrlW, ctrlX, ctrlY, ctrlZ:
-				fallthrough
-			// Catch unhandled control codes (anything <= 31)
-			case 0, 28, 29, 30, 31:
+			// Remaining unused control codes
+			case null, ctrlA, ctrlB, ctrlC, ctrlE, ctrlF, ctrlG, tab, ctrlK,
+				ctrlN, ctrlO, ctrlP, ctrlQ, ctrlR, ctrlS, ctrlT, ctrlU, ctrlV,
+				ctrlW, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
 				fmt.Print(beep)
 			default:
 				line = append(line[:pos], append([]rune{v}, line[pos:]...)...)

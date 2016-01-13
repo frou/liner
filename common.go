@@ -18,20 +18,21 @@ import (
 )
 
 type commonState struct {
-	terminalSupported bool
-	outputRedirected  bool
-	inputRedirected   bool
-	history           []string
-	historyMutex      sync.RWMutex
-	completer         WordCompleter
-	columns           int
-	killRing          *ring.Ring
-	ctrlCAborts       bool
-	r                 *bufio.Reader
-	tabStyle          TabStyle
-	multiLineMode     bool
-	cursorRows        int
-	maxRows           int
+	terminalSupported        bool
+	outputRedirected         bool
+	inputRedirected          bool
+	history                  []string
+	historyMutex             sync.RWMutex
+	completer                WordCompleter
+	columns                  int
+	killRing                 *ring.Ring
+	r                        *bufio.Reader
+	tabStyle                 TabStyle
+	wordBreakers             []rune
+	unusedControlCodeHandler ControlCodeHandler
+	multiLineMode            bool
+	cursorRows               int
+	maxRows                  int
 }
 
 // TabStyle is used to select how tab completions are displayed.
@@ -49,10 +50,6 @@ const (
 	TabCircular TabStyle = iota
 	TabPrints
 )
-
-// ErrPromptAborted is returned from Prompt or PasswordPrompt when the user presses Ctrl-C
-// if SetCtrlCAborts(true) has been called on the State
-var ErrPromptAborted = errors.New("prompt aborted")
 
 // ErrNotTerminalOutput is returned from Prompt or PasswordPrompt if the
 // platform is normally supported, but stdout has been redirected
@@ -202,12 +199,29 @@ type ModeApplier interface {
 	ApplyMode() error
 }
 
-// SetCtrlCAborts sets whether Prompt on a supported terminal will return an
-// ErrPromptAborted when Ctrl-C is pressed. The default is false (will not
-// return when Ctrl-C is pressed). Unsupported terminals typically raise SIGINT
-// (and Prompt does not return) regardless of the value passed to SetCtrlCAborts.
-func (s *State) SetCtrlCAborts(aborts bool) {
-	s.ctrlCAborts = aborts
+type ControlCodeHandler func(rune) bool
+
+// SetUnusedControlCodeHandler sets a function that can choose to do something
+// with ASCII control codes that Prompt reads but does not make use of for line
+// editing purposes. When f returns true, the control code is considered to be
+// handled and the normal beep is suppressed.
+func (s *State) SetUnusedControlCodeHandler(f ControlCodeHandler) {
+	s.unusedControlCodeHandler = f
+}
+
+// SetWordBreakers sets runes that will be considered stops for word-based
+// cursor movement and deletion without requiring surrounding whitespace.
+func (s *State) SetWordBreakers(breakers ...rune) {
+	s.wordBreakers = breakers
+}
+
+func (s *State) wordBreaker(r rune) bool {
+	for _, br := range s.wordBreakers {
+		if r == br {
+			return true
+		}
+	}
+	return false
 }
 
 // SetMultiLineMode sets whether line is auto-wrapped. The default is false (single line).

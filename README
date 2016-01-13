@@ -1,0 +1,16 @@
+This is my custom fork of github.com/peterh/liner
+
+---
+
+Runes considered boundaries for word-based movement and deletion (in addition
+to whitespace) can now be set by clients of the package.
+
+See: SetWordBreakers
+
+---
+
+Special treatment of ^C has been removed. ^C (and all other control-codes not
+used by liner for editing) can now be handled by clients of the package in a
+general manner.
+
+See: SetUnusedControlCodeHandler
