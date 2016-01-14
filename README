@@ -8,7 +8,7 @@ changes and additions without that constraint.
 Runes considered boundaries for word-based movement and deletion (in addition
 to whitespace) can now be set by clients of the package.
 
-See: SetWordBreakers
+See: SetPunctuation
 
 ---
 

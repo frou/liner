@@ -28,7 +28,7 @@ type commonState struct {
 	killRing                 *ring.Ring
 	r                        *bufio.Reader
 	tabStyle                 TabStyle
-	wordBreakers             []rune
+	punctuation              []rune
 	unusedControlCodeHandler ControlCodeHandler
 	multiLineMode            bool
 	cursorRows               int
@@ -209,15 +209,15 @@ func (s *State) SetUnusedControlCodeHandler(f ControlCodeHandler) {
 	s.unusedControlCodeHandler = f
 }
 
-// SetWordBreakers sets runes that will be considered stops for word-based
+// SetPunctuation sets runes that will be considered stops for word-based
 // cursor movement and deletion without requiring surrounding whitespace.
-func (s *State) SetWordBreakers(breakers ...rune) {
-	s.wordBreakers = breakers
+func (s *State) SetPunctuation(ps ...rune) {
+	s.punctuation = ps
 }
 
-func (s *State) wordBreaker(r rune) bool {
-	for _, br := range s.wordBreakers {
-		if r == br {
+func (s *State) isPunctuation(r rune) bool {
+	for _, pr := range s.punctuation {
+		if r == pr {
 			return true
 		}
 	}

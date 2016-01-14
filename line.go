@@ -732,21 +732,21 @@ mainLoop:
 				}
 				posPriorToWordRemoval := pos
 				// Remove a word to the left
-				var breakerEncountered bool
+				var punctEncountered bool
 				for {
 					if pos == 0 {
 						break
 					}
 					left := line[pos-1]
-					if unicode.IsSpace(left) || breakerEncountered {
+					if unicode.IsSpace(left) || punctEncountered {
 						break
 					}
-					if s.wordBreaker(left) {
+					if s.isPunctuation(left) {
 						// ctrlW should remove at least one non-whitespace rune
 						if pos != posPriorToWordRemoval {
 							break
 						}
-						breakerEncountered = true
+						punctEncountered = true
 					}
 					buf = append(buf, left)
 					line = append(line[:pos-1], line[pos:]...)
@@ -824,8 +824,8 @@ mainLoop:
 						}
 						spaceLeft = unicode.IsSpace(left)
 						havePrevIter = true
-						if s.wordBreaker(here) ||
-							(spaceLeft || s.wordBreaker(left)) && !spaceHere {
+						if s.isPunctuation(here) ||
+							(spaceLeft || s.isPunctuation(left)) && !spaceHere {
 							// Word begins here.
 							break
 						}
@@ -855,8 +855,8 @@ mainLoop:
 						}
 						spaceHere = unicode.IsSpace(here)
 						havePrevIter = true
-						if s.wordBreaker(left) ||
-							!spaceLeft && (spaceHere || s.wordBreaker(here)) {
+						if s.isPunctuation(left) ||
+							!spaceLeft && (spaceHere || s.isPunctuation(here)) {
 							// Word ended left.
 							break
 						}
