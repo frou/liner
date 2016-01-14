@@ -771,12 +771,9 @@ mainLoop:
 			case tab: // Tab completion
 				line, pos, next, err = s.tabComplete(p, line, pos)
 				goto haveNext
-			// Catch keys that do nothing, but you don't want them to beep
-			case esc:
-				// DO NOTHING
 			// Remaining unused control codes
 			case null, ctrlC, ctrlG, ctrlO, ctrlQ, ctrlS, ctrlV, ctrlX, ctrlZ,
-				fsep, gsep, rsep, usep:
+				esc, fsep, gsep, rsep, usep:
 				f := s.unusedControlCodeHandler
 				if f == nil || !f(v) {
 					fmt.Print(beep)
