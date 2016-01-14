@@ -81,9 +81,6 @@ const (
 	gsep /* ctrl] */
 	rsep /* ctrl^ */
 	usep /* ctrl_ */
-
-	// Outwith C0 set
-	asciiDel = 127
 )
 
 const (
@@ -438,7 +435,7 @@ func (s *State) reverseISearch(origLine []rune, origPos int) ([]rune, int, inter
 				} else {
 					fmt.Print(beep)
 				}
-			case backspace, asciiDel:
+			case backspace:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -713,7 +710,7 @@ mainLoop:
 				fmt.Println()
 				fmt.Print(prompt)
 				s.restartPrompt()
-			case backspace, asciiDel:
+			case backspace:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -990,7 +987,7 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, []rune{}, 0)
-			case backspace, asciiDel:
+			case backspace:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
