@@ -226,7 +226,6 @@ func (s *State) refreshMultiLine(prompt []rune, buf []rune, pos int) error {
 func (s *State) resetMultiLine(prompt []rune, buf []rune, pos int) {
 	columns := countMultiLineGlyphs(prompt, s.columns, 0)
 	columns = countMultiLineGlyphs(buf[:pos], s.columns, columns)
-	columns += 2 // ^C
 	cursorRows := (columns + s.columns) / s.columns
 	if s.maxRows-cursorRows > 0 {
 		for i := 0; i < s.maxRows-cursorRows; i++ {
