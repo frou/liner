@@ -49,43 +49,45 @@ const (
 
 // ASCII Control Codes
 const (
-	null      rune = 0 // ctrl@
-	ctrlA          = 1
-	ctrlB          = 2
-	ctrlC          = 3
-	ctrlD          = 4
-	ctrlE          = 5
-	ctrlF          = 6
-	ctrlG          = 7
-	backspace      = 8  // ctrlH
-	tab            = 9  // ctrlI
-	lf             = 10 // ctrlJ
-	ctrlK          = 11
-	ctrlL          = 12
-	cr             = 13 // ctrlM
-	ctrlN          = 14
-	ctrlO          = 15
-	ctrlP          = 16
-	ctrlQ          = 17
-	ctrlR          = 18
-	ctrlS          = 19
-	ctrlT          = 20
-	ctrlU          = 21
-	ctrlV          = 22
-	ctrlW          = 23
-	ctrlX          = 24
-	ctrlY          = 25
-	ctrlZ          = 26
-	esc            = 27  // ctrl[
-	fsep           = 28  // ctrl\
-	gsep           = 29  // ctrl]
-	rsep           = 30  // ctrl^
-	usep           = 31  // ctrl_
-	delCode        = 127 // (Not in C0)
+	null/* ctrl@ */ rune = iota
+	/* soh */ ctrlA
+	/* stx */ ctrlB
+	/* etx */ ctrlC
+	/* eot */ ctrlD
+	/* enq */ ctrlE
+	/* ack */ ctrlF
+	/* bel */ ctrlG
+	backspace /* ctrlH */
+	tab       /* ctrlI */
+	lf        /* ctrlJ */
+	/* vt */ ctrlK
+	/* np */ ctrlL
+	cr /* ctrlM */
+	/* so */ ctrlN
+	/* si */ ctrlO
+	/* dle */ ctrlP
+	/* dc1 */ ctrlQ
+	/* dc2 */ ctrlR
+	/* dc3 */ ctrlS
+	/* dc4 */ ctrlT
+	/* nak */ ctrlU
+	/* syn */ ctrlV
+	/* etb */ ctrlW
+	/* can */ ctrlX
+	/* em */ ctrlY
+	/* sub */ ctrlZ
+	esc  /* ctrl[ */
+	fsep /* ctrl\ */
+	gsep /* ctrl] */
+	rsep /* ctrl^ */
+	usep /* ctrl_ */
+
+	// Outwith C0 set
+	asciiDel = 127
 )
 
 const (
-	beep = "\a"
+	beep = string(ctrlG)
 )
 
 type tabDirection int
@@ -437,7 +439,7 @@ func (s *State) reverseISearch(origLine []rune, origPos int) ([]rune, int, inter
 				} else {
 					fmt.Print(beep)
 				}
-			case backspace, delCode:
+			case backspace, asciiDel:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -712,7 +714,7 @@ mainLoop:
 				fmt.Println()
 				fmt.Print(prompt)
 				s.restartPrompt()
-			case backspace, delCode:
+			case backspace, asciiDel:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -989,7 +991,7 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, []rune{}, 0)
-			case backspace, delCode:
+			case backspace, asciiDel:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
