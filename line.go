@@ -701,15 +701,6 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, line, pos)
-			case ctrlX: // reset
-				if s.multiLineMode {
-					s.resetMultiLine(p, line, pos)
-				}
-				line = line[:0]
-				pos = 0
-				fmt.Println()
-				fmt.Print(prompt)
-				s.restartPrompt()
 			case backspace:
 				if pos <= 0 {
 					fmt.Print(beep)
@@ -794,8 +785,8 @@ mainLoop:
 			case esc:
 				// DO NOTHING
 			// Remaining unused control codes
-			case null, ctrlC, ctrlG, ctrlO, ctrlQ, ctrlS, ctrlV, ctrlZ, fsep,
-				gsep, rsep, usep:
+			case null, ctrlC, ctrlG, ctrlO, ctrlQ, ctrlS, ctrlV, ctrlX, ctrlZ,
+				fsep, gsep, rsep, usep:
 				f := s.unusedControlCodeHandler
 				if f == nil || !f(v) {
 					fmt.Print(beep)
@@ -995,19 +986,10 @@ mainLoop:
 					line = append(line[:pos-n], line[pos:]...)
 					pos -= n
 				}
-			case ctrlX:
-				if s.multiLineMode {
-					s.resetMultiLine(p, line, pos)
-				}
-				line = line[:0]
-				pos = 0
-				fmt.Println()
-				fmt.Print(prompt)
-				s.restartPrompt()
 			// Remaining unused control codes
 			case null, ctrlA, ctrlB, ctrlC, ctrlE, ctrlF, ctrlG, tab, ctrlK,
 				ctrlN, ctrlO, ctrlP, ctrlQ, ctrlR, ctrlS, ctrlT, ctrlU, ctrlV,
-				ctrlW, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
+				ctrlW, ctrlX, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
 				fmt.Print(beep)
 			default:
 				line = append(line[:pos], append([]rune{v}, line[pos:]...)...)

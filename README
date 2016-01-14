@@ -1,4 +1,7 @@
-This is my custom fork of github.com/peterh/liner
+This is my customised fork of github.com/peterh/liner
+
+That upstream package has to maintain a stable public API. Here, I can make
+changes and additions without that constraint.
 
 ---
 
