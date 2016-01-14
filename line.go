@@ -80,10 +80,16 @@ const (
 	gsep /* ctrl] */
 	rsep /* ctrl^ */
 	usep /* ctrl_ */
+
+	delCC = 127
 )
 
+func isControlCode(r rune) bool {
+	return r >= null && r <= usep || r == delCC
+}
+
 const (
-	beep = string(ctrlG)
+	beep = "\a"
 )
 
 type tabDirection int
@@ -455,12 +461,10 @@ func (s *State) reverseISearch(origLine []rune, origPos int) ([]rune, int, inter
 				}
 			case ctrlG: // Cancel
 				return origLine, origPos, rune(esc), err
-			// Remaining unused control codes
-			case null, ctrlA, ctrlB, ctrlC, ctrlD, ctrlE, ctrlF, tab, lf,
-				ctrlK, ctrlL, cr, ctrlN, ctrlO, ctrlP, ctrlQ, ctrlT, ctrlU,
-				ctrlV, ctrlW, ctrlX, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
-				return []rune(foundLine), foundPos, next, err
 			default:
+				if isControlCode(v) {
+					return []rune(foundLine), foundPos, next, err
+				}
 				line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
 				pos++
 
@@ -771,22 +775,22 @@ mainLoop:
 			case tab: // Tab completion
 				line, pos, next, err = s.tabComplete(p, line, pos)
 				goto haveNext
-			// Remaining unused control codes
-			case null, ctrlC, ctrlG, ctrlO, ctrlQ, ctrlS, ctrlV, ctrlX, ctrlZ,
-				esc, fsep, gsep, rsep, usep:
-				f := s.unusedControlCodeHandler
-				if f == nil || !f(v) {
-					fmt.Print(beep)
-				}
 			default:
-				if pos == len(line) && !s.multiLineMode && countGlyphs(p)+countGlyphs(line) < s.columns-1 {
-					line = append(line, v)
-					fmt.Printf("%c", v)
-					pos++
+				if isControlCode(v) {
+					f := s.unusedControlCodeHandler
+					if f == nil || !f(v) {
+						fmt.Print(beep)
+					}
 				} else {
-					line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
-					pos++
-					s.refresh(p, line, pos)
+					if pos == len(line) && !s.multiLineMode && countGlyphs(p)+countGlyphs(line) < s.columns-1 {
+						line = append(line, v)
+						fmt.Printf("%c", v)
+						pos++
+					} else {
+						line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
+						pos++
+						s.refresh(p, line, pos)
+					}
 				}
 			}
 		case action:
@@ -965,14 +969,13 @@ mainLoop:
 					line = append(line[:pos-n], line[pos:]...)
 					pos -= n
 				}
-			// Remaining unused control codes
-			case null, ctrlA, ctrlB, ctrlC, ctrlD, ctrlE, ctrlF, ctrlG, tab,
-				ctrlK, ctrlN, ctrlO, ctrlP, ctrlQ, ctrlR, ctrlS, ctrlT, ctrlU,
-				ctrlV, ctrlW, ctrlX, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
-				fmt.Print(beep)
 			default:
-				line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
-				pos++
+				if isControlCode(v) {
+					fmt.Print(beep)
+				} else {
+					line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
+					pos++
+				}
 			}
 		}
 	}
