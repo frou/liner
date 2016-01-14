@@ -6,7 +6,6 @@ import (
 	"container/ring"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -625,15 +624,6 @@ mainLoop:
 					fmt.Print(beep)
 				}
 			case ctrlD: // del
-				if pos == 0 && len(line) == 0 {
-					// exit
-					return "", io.EOF
-				}
-
-				// ctrlD is a potential EOF, so the rune reader shuts down.
-				// Therefore, if it isn't actually an EOF, we must re-startPrompt.
-				s.restartPrompt()
-
 				if pos >= len(line) {
 					fmt.Print(beep)
 				} else {
@@ -967,14 +957,6 @@ mainLoop:
 				}
 				fmt.Println()
 				break mainLoop
-			case ctrlD: // del
-				if pos == 0 && len(line) == 0 {
-					// exit
-					return "", io.EOF
-				}
-				// ctrlD is a potential EOF, so the rune reader shuts down.
-				// Therefore, if it isn't actually an EOF, we must re-startPrompt.
-				s.restartPrompt()
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, []rune{}, 0)
@@ -987,9 +969,9 @@ mainLoop:
 					pos -= n
 				}
 			// Remaining unused control codes
-			case null, ctrlA, ctrlB, ctrlC, ctrlE, ctrlF, ctrlG, tab, ctrlK,
-				ctrlN, ctrlO, ctrlP, ctrlQ, ctrlR, ctrlS, ctrlT, ctrlU, ctrlV,
-				ctrlW, ctrlX, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
+			case null, ctrlA, ctrlB, ctrlC, ctrlD, ctrlE, ctrlF, ctrlG, tab,
+				ctrlK, ctrlN, ctrlO, ctrlP, ctrlQ, ctrlR, ctrlS, ctrlT, ctrlU,
+				ctrlV, ctrlW, ctrlX, ctrlY, ctrlZ, esc, fsep, gsep, rsep, usep:
 				fmt.Print(beep)
 			default:
 				line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
