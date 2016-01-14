@@ -4,7 +4,6 @@ package liner
 
 import (
 	"container/ring"
-	"errors"
 	"fmt"
 	"strings"
 	"unicode"
@@ -950,68 +949,6 @@ mainLoop:
 		}
 		if killAction > 0 {
 			killAction--
-		}
-	}
-	return string(line), nil
-}
-
-// PasswordPrompt displays p, and then waits for user input. The input typed by
-// the user is not displayed in the terminal.
-func (s *State) PasswordPrompt(prompt string) (string, error) {
-	if !s.terminalSupported {
-		return "", errors.New("liner: function not supported in this terminal")
-	}
-	if s.inputRedirected {
-		return s.promptUnsupported(prompt)
-	}
-	if s.outputRedirected {
-		return "", ErrNotTerminalOutput
-	}
-
-	s.startPrompt()
-	defer s.stopPrompt()
-	s.getColumns()
-
-	fmt.Print(prompt)
-	p := []rune(prompt)
-	var line []rune
-	pos := 0
-
-mainLoop:
-	for {
-		next, err := s.readNext()
-		if err != nil {
-			return "", err
-		}
-
-		switch v := next.(type) {
-		case rune:
-			switch v {
-			case cr, lf:
-				if s.multiLineMode {
-					s.resetMultiLine(p, line, pos)
-				}
-				fmt.Println()
-				break mainLoop
-			case ctrlL: // clear screen
-				s.eraseScreen()
-				s.refresh(p, []rune{}, 0)
-			case backspace, delCC:
-				if pos <= 0 {
-					fmt.Print(beep)
-				} else {
-					n := len(getSuffixGlyphs(line[:pos], 1))
-					line = append(line[:pos-n], line[pos:]...)
-					pos -= n
-				}
-			default:
-				if isControlCode(v) {
-					fmt.Print(beep)
-				} else {
-					line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
-					pos++
-				}
-			}
 		}
 	}
 	return string(line), nil

@@ -4,7 +4,6 @@ package liner
 
 import (
 	"bufio"
-	"errors"
 	"os"
 )
 
@@ -17,11 +16,6 @@ type State struct {
 // line editing on this operating system.
 func (s *State) Prompt(p string) (string, error) {
 	return s.promptUnsupported(p)
-}
-
-// PasswordPrompt is not supported in this OS.
-func (s *State) PasswordPrompt(p string) (string, error) {
-	return "", errors.New("liner: function not supported in this terminal")
 }
 
 // NewLiner initializes a new *State
