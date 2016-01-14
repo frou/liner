@@ -730,23 +730,26 @@ mainLoop:
 					line = append(line[:pos-1], line[pos:]...)
 					pos--
 				}
-				posPriorToWordRemoval := pos
 				// Remove a word to the left
-				var punctEncountered bool
 				for {
 					if pos == 0 {
 						break
 					}
 					left := line[pos-1]
-					if unicode.IsSpace(left) || punctEncountered {
+					spaceToLeft := unicode.IsSpace(left)
+					if spaceToLeft {
 						break
 					}
-					if s.isPunctuation(left) {
-						// ctrlW should remove at least one non-whitespace rune
-						if pos != posPriorToWordRemoval {
+					punctToLeft := s.isPunctuation(left)
+					if len(buf) > 0 {
+						lastDeld := buf[len(buf)-1]
+						lastDeldIsWord := !unicode.IsSpace(lastDeld) &&
+							!s.isPunctuation(lastDeld)
+						if lastDeldIsWord && punctToLeft {
+							// A word begins when a word-rune is preceded by
+							// any non-word-rune.
 							break
 						}
-						punctEncountered = true
 					}
 					buf = append(buf, left)
 					line = append(line[:pos-1], line[pos:]...)
@@ -810,23 +813,39 @@ mainLoop:
 				}
 			case wordLeft, altB:
 				if pos > 0 {
-					var spaceLeft, spaceHere, havePrevIter bool
+					var (
+						spaceToLeft, spaceHere,
+						punctToLeft, punctHere,
+						wordToLeft, wordHere,
+						prevIterKnown bool
+					)
 					for {
 						pos--
 						if pos == 0 {
 							break
 						}
 						left, here := line[pos-1], line[pos]
-						if havePrevIter {
-							spaceHere = spaceLeft
+						if prevIterKnown {
+							spaceHere = spaceToLeft
+							punctHere = punctToLeft
+							wordHere = wordToLeft
 						} else {
 							spaceHere = unicode.IsSpace(here)
+							punctHere = s.isPunctuation(here)
+							wordHere = !spaceHere && !punctHere
 						}
-						spaceLeft = unicode.IsSpace(left)
-						havePrevIter = true
-						if s.isPunctuation(here) ||
-							(spaceLeft || s.isPunctuation(left)) && !spaceHere {
-							// Word begins here.
+						spaceToLeft = unicode.IsSpace(left)
+						punctToLeft = s.isPunctuation(left)
+						wordToLeft = !spaceToLeft && !punctToLeft
+						prevIterKnown = true
+						if !wordToLeft && wordHere {
+							// A word begins when a word-rune is preceded by
+							// any non-word-rune.
+							break
+						}
+						if spaceToLeft && punctHere {
+							// A "punctuation word" begins when a punctuation-
+							// rune is preceded by a space-rune.
 							break
 						}
 					}
@@ -841,23 +860,39 @@ mainLoop:
 				}
 			case wordRight, altF:
 				if pos < len(line) {
-					var spaceLeft, spaceHere, havePrevIter bool
+					var (
+						spaceToLeft, spaceHere,
+						punctToLeft, punctHere,
+						wordToLeft, wordHere,
+						prevIterKnown bool
+					)
 					for {
 						pos++
 						if pos == len(line) {
 							break
 						}
 						left, here := line[pos-1], line[pos]
-						if havePrevIter {
-							spaceLeft = spaceHere
+						if prevIterKnown {
+							spaceToLeft = spaceHere
+							punctToLeft = punctHere
+							wordToLeft = wordHere
 						} else {
-							spaceLeft = unicode.IsSpace(left)
+							spaceToLeft = unicode.IsSpace(left)
+							punctToLeft = s.isPunctuation(left)
+							wordToLeft = !spaceToLeft && !punctToLeft
 						}
 						spaceHere = unicode.IsSpace(here)
-						havePrevIter = true
-						if s.isPunctuation(left) ||
-							!spaceLeft && (spaceHere || s.isPunctuation(here)) {
-							// Word ended left.
+						punctHere = s.isPunctuation(here)
+						wordHere = !spaceHere && !punctHere
+						prevIterKnown = true
+						if wordToLeft && !wordHere {
+							// A word ends when a word-rune is followed by any
+							// non-word-rune.
+							break
+						}
+						if punctToLeft && spaceHere {
+							// A "punctuation word" ends when a punctuation-
+							// rune is followed by a space-rune.
 							break
 						}
 					}
