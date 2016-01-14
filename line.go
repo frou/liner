@@ -440,7 +440,7 @@ func (s *State) reverseISearch(origLine []rune, origPos int) ([]rune, int, inter
 				} else {
 					fmt.Print(beep)
 				}
-			case backspace:
+			case backspace, delCC:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -695,7 +695,7 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, line, pos)
-			case backspace:
+			case backspace, delCC:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
@@ -961,7 +961,7 @@ mainLoop:
 			case ctrlL: // clear screen
 				s.eraseScreen()
 				s.refresh(p, []rune{}, 0)
-			case backspace:
+			case backspace, delCC:
 				if pos <= 0 {
 					fmt.Print(beep)
 				} else {
