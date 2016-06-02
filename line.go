@@ -5,6 +5,7 @@ package liner
 import (
 	"container/ring"
 	"fmt"
+	"io"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -626,9 +627,16 @@ mainLoop:
 				} else {
 					fmt.Print(beep)
 				}
-			// TODO^: Restore the ctrlD on empty line causing EOF thing. Didn't
-			// realise I'd miss it so much.
 			case ctrlD: // del
+				if pos == 0 && len(line) == 0 {
+					// exit
+					return "", io.EOF
+				}
+
+				// ctrlD is a potential EOF, so the rune reader shuts down.
+				// Therefore, if it isn't actually an EOF, we must re-startPrompt.
+				s.restartPrompt()
+
 				if pos >= len(line) {
 					fmt.Print(beep)
 				} else {

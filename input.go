@@ -96,7 +96,7 @@ func (s *State) restartPrompt() {
 			n.r, _, n.err = s.r.ReadRune()
 			next <- n
 			// Shut down nexter loop when an end condition has been reached
-			if n.err != nil || n.r == lf || n.r == cr {
+			if n.err != nil || n.r == lf || n.r == cr || n.r == ctrlD {
 				close(next)
 				return
 			}
