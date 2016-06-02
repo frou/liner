@@ -626,6 +626,8 @@ mainLoop:
 				} else {
 					fmt.Print(beep)
 				}
+			// TODO^: Restore the ctrlD on empty line causing EOF thing. Didn't
+			// realise I'd miss it so much.
 			case ctrlD: // del
 				if pos >= len(line) {
 					fmt.Print(beep)
